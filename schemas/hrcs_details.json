@@ -1,0 +1,19 @@
+{
+    "variable": {
+        "Interannual SST Variability": "int-sst-var",
+        "Monthly Maximum Mean": "mmm",
+        "No DHW Days 4": "no-dhw-4",
+        "No DHW Days 8": "no-dhw-8",
+        "Probability DHW Days 4": "prob-dhw-4",
+        "Probability DHW Days 8": "prob-dhw-8",
+        "Seasonal SST Variability": "seas-sst-var",
+        "Annual SST Trend": "trend-ann-sst"
+    },
+    "period": {
+        "1985-2019": "1985-2019",
+        "2021-2040": "2021-2040",
+        "2041-2060": "2041-2060",
+        "2061-2080": "2061-2080",
+        "2081-2100": "2081-2100"
+    }
+}
