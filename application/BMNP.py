@@ -250,3 +250,302 @@ class BMNP:
         else:
             # Display the heatmap in a popup window
             plt.show()
+    
+    @staticmethod
+    def createNC_HRCS(file_location, csv_data, variable, period, scenario):
+        # Imports required Libraries
+        import os
+        import netCDF4 as nc
+        
+        # Reads in the lat/lon data from the csv file, as well as data
+        lat = csv_data['latitude']
+        lon = csv_data['longitude']
+        if period == '1985-2019':
+            data = csv_data['data']
+        else:
+            pass
+
+        # Creates the new netCDF file
+        new_nc_file = nc.Dataset(f'{file_location}/{period}_{variable}_{scenario}.nc', "w", format="NETCDF4")
+        
+        # Creates the dimensions for the new netCDF file, which are lat and lon but time is automatically created
+        # Lat and lon do not expand the entire range, but rather the range of the Bonaire Region
+        new_nc_file.createDimension("lat", 1)
+        new_nc_file.createDimension("lon", 1)
+        
+        # Creates the variables for the new netCDF file
+        new_lat = new_nc_file.createVariable("lat", "f4", ("lat",))
+        new_lon = new_nc_file.createVariable("lon", "f4", ("lon",))
+        new_var = new_nc_file.createVariable( "f4", ("time", "lat", "lon",))
+    
+    @staticmethod
+    def VisualizeHRCSData(file_location, variable, period, scenario, shape_loc):
+        # Imports required Libraries
+        import pandas as pd
+        import seaborn as sns
+        import matplotlib.pyplot as plt
+        import geopandas as gpd
+        import netCDF4 as nc
+        import numpy as np
+        
+        # Creates Basic Variables
+        value = -1
+        ncExists = False
+        csvExists = False
+        
+        # Changes values if they are incorrect
+        if variable == 'mmm' or variable == 'int_sst_var' or variable == 'seas_sst_var' or variable == 'trend_ann_var':
+            period = '1985-2019'
+            scenario = 'observed'
+        elif period == '1985-2019':
+            scenario = 'observed'
+        
+        # Checks for files based on the variable, period and scenario.
+        nc_filename = f'{file_location}/{period}_{variable}_{scenario}.nc4'
+            
+        # Loads netCDF file in this location
+        nc_file = nc.Dataset(nc_filename)
+        
+        # Create a graph of the data utilizing matplotlib + seaborn, plotting the data as a heatmap
+        # Overlay the shapefile on top of the heatmap
+        latitude = nc_file['lat'][:]
+        longitude = nc_file['lon'][:]
+        
+        if 'dhw' in variable:
+            variable = f'ensemble_mean_{variable}'
+            variable = variable.replace('-', '_')
+        else:
+            variable = variable.replace('-', '_')
+        data = nc_file[variable][:]
+        
+        # Repalce 0's in data with NaNs
+        data[data == 0] = np.nan
+        
+        # Create Graph
+        plt.figure(figsize=(10, 10))
+        
+        # Create Heatmap, using the variables
+        sns.heatmap(data[:, :], vmin = 0, vmax = 1, cmap='turbo', xticklabels=longitude, yticklabels=latitude)
+        
+        # Loads the Shape Files
+        shapefile = gpd.read_file(shape_loc)
+        
+        # Plots the shapefile on top of the heatmap
+        shapefile.plot(ax=plt.gca(), facecolor='green', edgecolor='black', linewidth=1)
+        
+        # Sets the title and show the plot
+        plt.title(f"HRCS {variable} for {period} {scenario}"), plt.xlabel("Longitude"), plt.ylabel("Latitude")
+        
+        # Shows the graph
+        plt.show()
+            
+    @staticmethod
+    def HRCS_CSV2NC(file_location):
+        # Imports required Libraries
+        import pandas as pd
+        import netCDF4 as nc
+        import numpy as np
+        import warnings
+        
+        # Ignore all warnings.
+        warnings.filterwarnings("ignore")
+        
+        # Creates a list for each thing
+        variables = ['no_dhw_days_4', 'no_dhw_days_8', 'prob_dhw_4', 'prob_dhw_8', 'mmm', 'int_sst_var', 'seas_sst_var', 'trend_ann_sst']
+        scenarios = ['ssp126', 'ssp245', 'ssp370', 'ssp585']
+        
+        # Where files are stored
+        new_location = './data/refined/HRCS/'
+        
+        # Checks to see that the file_location exists
+        BMNP.createFolders(new_location)
+        
+        # Creates a list of files located in file_location
+        files = os.listdir(file_location)
+        
+        # Iterates through each file in the list
+        for file in files:
+            if 'mmm' in file:
+                continue
+            # or if file is "nc" folder
+            elif 'nc' in file:
+                continue
+            
+            # Two Paths:
+            # 1. 1985-2019_data.csv
+            # 2. 2021-2100_variable_scenario_data.csv
+            
+            if '1985-2019' in file:
+                period = '1985-2019'
+                scenario = 'observed'
+                
+                for variable in variables:
+                    # Loads in the csv file
+                    csv_data = pd.read_csv(f'{file_location}/{file}')
+                    
+                    # Creates list of lat/lon
+                    lat = csv_data['latitude']
+                    lon = csv_data['longitude']
+                    
+                    # Deletes repeats of lat/lon
+                    lat = lat.drop_duplicates()
+                    lon = lon.drop_duplicates()
+                    
+                    # Orders lon from smallest to biggest
+                    lon = lon.sort_values()
+                    
+                    # Orders lat from biggest to smallest
+                    lat = lat.sort_values(ascending=False)
+                    
+                    # Create a numpy array, width = range of lon, height = range of lat
+                    # Array is filled with Nan values
+                    temp_array = np.empty((len(lat)+1, len(lon)+1))
+                    
+                    # Adds lon to top row of array, starting at pos 1
+                    temp_array[0, 1:] = lon
+                    temp_array[1:, 0] = lat
+                    
+                    # Goes through each row in csv file and adds the data to the array
+                    for index, row in csv_data.iterrows():
+                        # Gets the lat/lon index
+                        lat_index = np.where(lat == row['latitude'])[0][0]
+                        lon_index = np.where(lon == row['longitude'])[0][0]
+                        
+                        # Adds the data cell to that particular position in temp_array
+                        temp_array[lat_index+1, lon_index+1] = row[variable]
+                        
+                    # Creates the new netCDF file
+                    temp_var = variable.replace('_', '-')
+                    new_nc_file = nc.Dataset(f'{new_location}/{period}_{temp_var}_{scenario}.nc4', "w", format="NETCDF4")
+                    
+                    # Creates the dimensions for the new netCDF file, which are lat and lon but time is automatically created
+                    # Lat and lon do not expand the entire range, but rather the range of the Bonaire Region
+                    new_nc_file.createDimension("lat", len(lat))
+                    new_nc_file.createDimension("lon", len(lon))
+                    
+                    # Creates the variables for the new netCDF file
+                    new_lat = new_nc_file.createVariable("lat", "f4", ("lat",))
+                    new_lon = new_nc_file.createVariable("lon", "f4", ("lon",))
+                    new_var = new_nc_file.createVariable(variable, "f4", ("lat", "lon",))
+                    
+                    # Adds the attributes to the new netCDF file
+                    new_nc_file.description = f"HRCS {variable} data"
+                    new_nc_file.source = "Subsetted from " + file
+                    new_lat.units = "degrees_north"
+                    new_lon.units = "degrees_east"
+                    new_var.units = "Celsius"
+                    
+                    # Adds the data to the new netCDF file
+                    new_lat[:] = lat[0:len(lat)]
+                    new_lon[:] = lon[0:len(lon)]
+                    
+                    # Saves temp_array to csv in current folder
+                    #np.savetxt('temp_array.csv', temp_array, delimiter=',')
+                    
+                    # Delete the top row and left column of the array
+                    temp_array = np.delete(temp_array, 0, 0)
+                    temp_array = np.delete(temp_array, 0, 1)
+                    
+                    # Saves the data to the new netCDF file
+                    new_var[:] = temp_array
+                    
+                    # Closes the netCDF files
+                    new_nc_file.close()
+                    
+            else:
+                name = file.split('_')
+                years = ['2021-2040', '2041-2060', '2061-2080', '2081-2100']
+                
+                # For variable, changes "-" to "_"
+                variable = name[1].replace('-', '_')
+                scenario = name[2]
+                
+                # Removes .csv from scenario
+                scenario = scenario.replace('.csv', '')
+                
+                # Loads file into dataframe
+                csv_data = pd.read_csv(f'{file_location}/{file}')
+                
+                # Creates a list of lat/lon
+                lat = csv_data['latitude']
+                lon = csv_data['longitude']
+                
+                # Deletes repeats of lat/lon
+                lat = lat.drop_duplicates()
+                lon = lon.drop_duplicates()
+                
+                # Orders lon from smallest to biggest
+                lon = lon.sort_values()
+
+                # Orders lat from biggest to smallest
+                lat = lat.sort_values(ascending=False)
+                
+                for year in years:
+                    
+                    # Extracts the data for a specific year, which is in the 'time_period' column.
+                    data = csv_data.loc[csv_data['time_period'] == year]
+                    
+                    # Drop "region_name"
+                    data.drop('region_name', axis=1, inplace=True)
+                    
+                    # Create a numpy array, width = range of lon, height = range of lat
+                    # Array is filled with Nan values
+                    temp_array = np.empty((len(lat)+1, len(lon)+1))
+                    
+                    # new variable name:
+                    temp_var = variable.split('_')
+                    
+                    # If "days" in list, delete.
+                    if 'days' in temp_var: temp_var.remove('days')
+                    
+                    # Recombines list into string, with - instead of _
+                    temp_var = '_'.join(temp_var)
+                    nowvariable = f'ensemble_mean_{temp_var}'
+                    
+                    # Adds lon to top row of array, starting at pos 1
+                    temp_array[0, 1:] = lon
+                    temp_array[1:, 0] = lat
+                    
+                    # Goes through each row in csv file and adds the data to the array
+                    for index, row in data.iterrows():
+                        # Gets the lat/lon index
+                        lat_index = np.where(lat == row['latitude'])[0][0]
+                        lon_index = np.where(lon == row['longitude'])[0][0]
+                        
+                        # Adds the data cell to that particular position in temp_array
+                        temp_array[lat_index+1, lon_index+1] = row[nowvariable]
+                    
+                    # Creates the new netCDF file
+                    newishvariable = temp_var.replace('_', '-')
+                    new_nc_file = nc.Dataset(f'{new_location}/{year}_{newishvariable}_{scenario}.nc4', "w", format="NETCDF4")
+                    
+                    # Creates the dimensions for the new netCDF file, which are lat and lon but time is automatically created
+                    # Lat and lon do not expand the entire range, but rather the range of the Bonaire Region
+                    new_nc_file.createDimension("lat", len(lat))
+                    new_nc_file.createDimension("lon", len(lon))
+                    
+                    # Creates the variables for the new netCDF file
+                    new_lat = new_nc_file.createVariable("lat", "f4", ("lat",))
+                    new_lon = new_nc_file.createVariable("lon", "f4", ("lon",))
+                    new_var = new_nc_file.createVariable(nowvariable, "f4", ("lat", "lon",))
+                    
+                    # Adds the attributes to the new netCDF file
+                    new_nc_file.description = f"HRCS {nowvariable} data"
+                    new_nc_file.source = "Subsetted from " + file
+                    new_lat.units = "degrees_north"
+                    new_lon.units = "degrees_east"
+                    new_var.units = "Celsius"
+                    
+                    # Adds the data to the new netCDF file
+                    new_lat[:] = lat[0:len(lat)]
+                    new_lon[:] = lon[0:len(lon)]
+                    
+                    # Delete the top row and left column of the array
+                    temp_array = np.delete(temp_array, 0, 0)
+                    temp_array = np.delete(temp_array, 0, 1)
+                    
+                    # Saves the data to the new netCDF file
+                    new_var[:] = temp_array
+                    
+                    # Closes the netCDF files
+                    new_nc_file.close()
