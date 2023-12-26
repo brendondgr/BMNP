@@ -1,7 +1,16 @@
 import os
 import configparser
 
-class BMNP:
+from PySide6.QtCore import Signal, QObject
+from matplotlib.figure import Figure
+
+class BMNP(QObject):
+    NewGraph = Signal(Figure)
+
+    def __init__(self, parent=None):
+        super().__init__(parent)
+        return
+    
     @staticmethod
     def getFileLocation(date):
         # Sets up the config parser
@@ -549,3 +558,109 @@ class BMNP:
                     
                     # Closes the netCDF files
                     new_nc_file.close()
+    
+    @staticmethod
+    def AWSMUR():
+        import xarray as xr
+        import s3fs
+
+        # Create an S3FileSystem object
+        s3 = s3fs.S3FileSystem(anon=True)
+
+        # Define the S3 bucket and prefix
+        bucket = 'mur-sst'
+        prefix = 'zarr-v1'
+
+        # Create a mapper for the Zarr store
+        store = s3fs.S3Map(root=f'{bucket}/{prefix}', s3=s3)
+
+        # Open the dataset using xarray
+        ds = xr.open_zarr(store)
+        
+        data = ds.sel(lat=slice(12.0, 13.0), lon=slice(-68.0, -67.0))
+        
+    @staticmethod
+    def viewMUR2020(date, save, colorbar, console, bmnp, signals = None):
+        # Importing Plotting Libraries
+        import matplotlib.pyplot as plt
+        import geopandas as gpd
+        import xarray as xr
+        import numpy as np
+        from configparser import ConfigParser
+        
+        # Sets up the config parser
+        config = ConfigParser()
+        config.read('config.ini')
+        
+        # Reads in location for MUR
+        data_location = f"{config['settings']['MUR_pre2020']}"
+        
+        # Push signal to say data was loaded in.
+        # signals.add_message(f'Loading {data_location}...')
+
+        # Loads the data
+        nc = xr.open_dataset(f'{data_location}')
+
+        # Slices to show only data from 2010-05-05
+        nc = nc.sel(time=date)
+
+        # Create plot with multiple subplots
+        fig, ax = plt.subplots(1,1, figsize=(15,10))
+
+        # Loads Shape File
+        shape = gpd.read_file('./shapeFiles/BON_Coastline.shp')
+
+        # Sets Label Ranges
+        x_range = np.arange(-68.48, -68.17, 0.01).round(2)
+        y_range = np.arange(12.0, 12.35, 0.01).round(2)[::-1]
+
+        # Sets Limits
+        ax.set_xlim(x_range.min(), x_range.max())
+        ax.set_ylim(y_range.min(), y_range.max())
+
+        # Sets the Title
+        ax.set_title(f'MUR SST for: {date}')
+
+        # Sets Axis
+        ax.set_xlabel('Longitude')
+        ax.set_ylabel('Latitude')
+
+        # Plots the Shape File
+        shape.plot(ax=ax, color='lime', edgecolor='black', zorder=3)
+
+        # Generate the heatmap
+        
+
+        # Add colorbar
+        if colorbar:
+            img = plt.imshow(nc.analysed_sst[0,:,:]-273.14, extent=[x_range.min(), x_range.max(), y_range.min(), y_range.max()], 
+                alpha=1, zorder=2, cmap='jet', vmin=25, vmax=35)
+            
+            cbar = plt.colorbar(img)
+            cbar.set_label('Temperature (C)')
+        else:
+            plt.imshow(nc.analysed_sst[0,:,:]-273.14, extent=[x_range.min(), x_range.max(), y_range.min(), y_range.max()], 
+                alpha=1, zorder=2, cmap='jet')
+            
+            cbar = plt.colorbar()
+            cbar.set_label('Temperature (C)')
+        
+        # Saves the graph if specified
+        if save:
+            colorbar = '_ColorBarAdjusted' if colorbar else ''
+            name = f'MUR_{date}{colorbar}'
+            download_loc = f"{config['settings']['graphs']}/MUR-Daily/{name}.png"
+            
+            # First checks to see if the file exists in the refinedMUR folder, then checks to see if it exists in the rawMUR folder.
+            if BMNP.fileExists(download_loc):
+                console.add_message(f'Error: {name} already exists. It was not saved.')
+            else:
+                BMNP.createFolders(download_loc)
+                plt.savefig(download_loc)
+                console.add_message(f'{name} was saved.')
+                
+        # Push signal of the plot
+        bmnp.NewGraph.emit(fig)
+        
+if __name__ == "__main__":
+    BMNP.AWSMUR()

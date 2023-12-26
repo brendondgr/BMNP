@@ -19,31 +19,46 @@ class WorkerSignals(QObject):
         return
 
 class CreateWorker():
-    def __init__(self, console):
+    def __init__(self, console, date, save, datatype):
         self.console = console
+        self.date = date
+        self.save = save
+        self.datatype = datatype
+        self.signals = WorkerSignals(console)
         return
 
-    def createWorker(self, type, date, tabWidget):  # Add tabWidget as a parameter
-        if type == "daily":
-            worker = viewDailyWorker(self.console, date, tabWidget)  # Pass tabWidget to the worker
+    def createWorker(self):  # Add tabWidget as a parameter
+        print(self.datatype)
+        if self.datatype == "MUR Data":
+            print("MUR Data")
+            worker = MURPre2020_DataWorker(self.console, self.date)  # Pass tabWidget to the worker
+            
+            # Execute
+            worker.signals.finished.connect(self.signals.finished)
+            worker.signals.finished.connect(worker.deleteLater)
+            worker.signals.finished.connect(self.deleteLater)
+            worker.signals.add_message.connect(worker.signals.add_message)
             QThreadPool.globalInstance().start(worker)
-            worker.signals.finished.connect(self.console.add_message("Task Finished Successfully"))
         return
 
 
 ###########################################################
 ##            VIEW DATA SECTION FOR WORKERS              ##
 ###########################################################
-class DailyDataWorker(QRunnable):
-    def __init__(self, console, date, tabWidget):  # Add tabWidget as a parameter
+class MURPre2020_DataWorker(QRunnable):
+    def __init__(self, console, date, save, datatype):
         super().__init__()
         self.console = console
         self.date = date
-        self.tabWidget = tabWidget  # Store tabWidget as an instance variable
+        self.save = save
+        self.datatype = datatype
         self.signals = WorkerSignals(console)
         return
 
-
     @Slot()
     def run(self):
-        pass
+        from BMNP import BMNP
+        self.signals.add_message("Running Daily Data Worker")
+        BMNP.viewMUR2020(self.date, self.save, self.console, self.signals)
+        self.signals.finished.emit()
+        return

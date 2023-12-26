@@ -44,7 +44,7 @@ def run_HRCSData():
     file_location = f"{config['settings']['data']}{config['settings']['refined']}{config['settings']['HRCS']}"
     shape_loc = f"{config['settings']['shapeFiles']}"
     
-    play = 2
+    play = 3
     
     if play == 1:
         variable = 'mmm'
@@ -65,5 +65,21 @@ if __name__ == "__main__":
     # run_refineData("20200101", "20230101")
     # run_dailyAverageView("20221001", False)
     # run_MultiDailyAverageView("20221101", "20221130", True)
-    run_HRCSData()
-    pass
+    import xarray as xr
+    import s3fs
+
+    # Create an S3FileSystem object
+    s3 = s3fs.S3FileSystem(anon=True)
+
+    # Define the S3 bucket and prefix
+    bucket = 'mur-sst'
+    prefix = 'zarr-v1'
+
+    # Create a mapper for the Zarr store
+    store = s3fs.S3Map(root=f'{bucket}/{prefix}', s3=s3)
+
+    # Open the dataset using xarray
+    ds = xr.open_zarr(store)
+
+    # Access the data
+    print(ds)
