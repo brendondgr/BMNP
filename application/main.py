@@ -31,7 +31,7 @@ class MainWindow(QMainWindow):
         # Puts "TabWidget" on the left side.
         self.first_widget = TabWidget(self.console_widget, self.bmnp)
         self.first_widget.setSizePolicy(QSizePolicy.Fixed, QSizePolicy.Preferred)
-        self.first_widget.setMinimumWidth(450)
+        self.first_widget.setMinimumWidth(350)
         self.second_widget = MatplotlibWidget(self.bmnp)
         self.second_widget.setMinimumHeight(450)
         self.second_widget.hide()

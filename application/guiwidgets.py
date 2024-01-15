@@ -130,6 +130,10 @@ class TabWidget(QTabWidget):
             else:
                 self.console_widget.add_message("Date is not valid")
                 
+        elif self.viewDataTab.layout().itemAtPosition(4, 0).widget().isChecked():
+            #self.console_widget.add_message("HRCS Data")
+            pass
+            
     def viewDataLayout(self):                          
         # Creates Layout
         layout = QGridLayout()
@@ -185,25 +189,6 @@ class TabWidget(QTabWidget):
                                                                  DailyData_Check1, DailyData_Label05,
                                                                  DailyData_Dropdown1, DailyData_Check2))
         
-        # -------------------------------------- #
-        # -             DAILY DATA             - #
-        # -              MULTIPLE              - #
-        # -------------------------------------- #
-        # Category for Multiple Daily Data #
-        RadioMultiDailyData = QRadioButton("Multiple Daily Data")
-        
-        layout.addWidget(RadioMultiDailyData, viewDataRow, 0)
-        viewDataRow += 1
-        
-        # -------------------------------------- #
-        # -            LOGGER DATA             - #
-        # -------------------------------------- #
-        # Category for Logger Data #
-        RadioLoggerData = QRadioButton("Logger Data")
-        layout.addWidget(RadioLoggerData, viewDataRow, 0)
-        viewDataRow += 1
-        
-        
         
         # -------------------------------------- #
         # -             HRCS DATA              - #
@@ -250,11 +235,29 @@ class TabWidget(QTabWidget):
         viewDataRow += 1
         
         # -------------------------------------- #
+        # -             DAILY DATA             - #
+        # -              MULTIPLE              - #
+        # -------------------------------------- #
+        # Category for Multiple Daily Data #
+        RadioMultiDailyData = QRadioButton("Multiple Daily Data")
+        
+        layout.addWidget(RadioMultiDailyData, viewDataRow, 0)
+        viewDataRow += 1
+        
+        # -------------------------------------- #
+        # -            LOGGER DATA             - #
+        # -------------------------------------- #
+        # Category for Logger Data #
+        RadioLoggerData = QRadioButton("Logger Data")
+        layout.addWidget(RadioLoggerData, viewDataRow, 0)
+        viewDataRow += 1
+        
+        # -------------------------------------- #
         # -            SUBMIT BUTTON           - #
         # -------------------------------------- #
         submit_button = QPushButton("Submit")
         submit_button.clicked.connect(self.ButtonClicked)
-        layout.addWidget(submit_button, viewDataRow, 0, 1, 2)
+        layout.addWidget(submit_button, viewDataRow, 0, 1, 3)
         viewDataRow += 1
         
         # Set Alignment to Top
