@@ -465,6 +465,14 @@ class BMNP(QObject):
         # Checks to see that the file_location exists
         BMNP.createFolders(new_location)
         
+        # Iterates through new_location, creates a list of files
+        deletefiles = True
+        if deletefiles:
+            files = os.listdir(new_location)
+            for file in files:
+                os.remove(f'{new_location}/{file}')
+                
+        
         # Creates a list of files located in file_location
         files = os.listdir(file_location)
         
@@ -496,23 +504,234 @@ class BMNP(QObject):
                     if BMNP.fileExists(f'{new_location}/{period}_{variable}_{scenario}.nc'): continue
                     
                     # Extract data from the column.
-                    data = df[column]
+                    prev_data = df[column]
                     
                     # Sorts lat and lon
-                    lat = BMNP.sortDFCol(latitude)
+                    lat = (BMNP.sortDFCol(latitude))[::-1]
                     lon = BMNP.sortDFCol(longitude)
                     
-                    import numpy as np
                     # Create a 2D array of np.nan, in size of lon vs lat
-                    data = np.full((len(lon), len(lat)), np.nan)
+                    new_data = np.full((len(lat), len(lon)), np.nan)
                     
-                    print(lat)
-                    print(lon)
+                    # Convert data to a dataframe
+                    data = pd.DataFrame(new_data, index=lat, columns=lon)
+                    #print(data)
+                    
+                    # Cycle through values found in prev_data
+                    # Look at the respective rows in lat and lon
+                    # Find the respective column / row in data
+                    # Add this value to this location
+                    for i in range(0, len(prev_data)):
+                        # Extract the lat and lon from the dataframe
+                        lati = latitude[i]
+                        long = longitude[i]
+                        
+                        # Extract the data from the dataframe
+                        data_value = prev_data[i]
+                        
+                        # Add the data to the correct location
+                        data[long][lati] = data_value
+                        '''if lat in data.index and lon in data.columns:
+                            data[lon][lat] = data_value'''                    
                             
-    
+                    # Create the netCDF file for new_data
+                    BMNP.createFolders(f'{new_location}/{period}_{variable}_{scenario}.nc')
+                    
+                    # Create the netCDF file
+                    nc_file = nc.Dataset(f'{new_location}/{period}_{variable}_{scenario}.nc', "w", format="NETCDF4")
+                    
+                    # Create the dimensions for the new netCDF file
+                    nc_file.createDimension("lat", len(lat))
+                    nc_file.createDimension("lon", len(lon))
+                    
+                    # Create the variables for the new netCDF file
+                    lat_nc = nc_file.createVariable("lat", "f4", ("lat",))
+                    lon_nc = nc_file.createVariable("lon", "f4", ("lon",))
+                    variable_nc = nc_file.createVariable("variable", "f4", ("lat", "lon",))
+                    
+                    # Add the attributes to the new netCDF file
+                    nc_file.description = "Subsetted HRCS Data"
+                    nc_file.source = "Subsetted from " + file
+                    lat_nc.units = "degrees_north"
+                    lon_nc.units = "degrees_east"
+                    
+                    # Add the data to the new netCDF file
+                    lat_nc[:] = lat
+                    lon_nc[:] = lon
+                    variable_nc[:] = new_data
+                    
+                    # Close the netCDF file
+                    nc_file.close()
+                    
+            elif '2021-2100' in file:
+                # Extract names
+                period, variable, scenario = str(file).split('_')
+                #variable = variable.replace('-', '_')
+                scenario = scenario.replace('.csv', '')
+                
+                # Checks to see if 'dhw' is in variable name
+                if 'dhw' in variable:
+                    # Change variable to the 'ensemble_mean_{variable}' while also removing '_days' from the variable name
+                    variablelabel = f'ensemble_mean_{variable.replace("-", "_")}'
+                    variablelabel = variablelabel.replace('_days', '')
+                    
+                    df = pd.read_csv(f"{file_location}/{file}")
+                    
+                    for time in years:
+                        # Create new dataframe, filtering by the specified 'time' in 'time_period' column.
+                        df2 = df[df['time_period'] == time]
+                        
+                        # Extract the latitude and longitude from the dataframe
+                        latitude = df2['latitude']
+                        longitude = df2['longitude']
+                        
+                        # Sorts lat and lon
+                        lat = (BMNP.sortDFCol(latitude))[::-1]
+                        lon = BMNP.sortDFCol(longitude)
+                        
+                        # Convert latitude and longitude to a list
+                        latitude = latitude.tolist()
+                        longitude = longitude.tolist()
+                        
+                        # Extracts Variable Data from the dataframe
+                        prev_data = df2[f'{variablelabel}']
+                        prev_data = prev_data.tolist()
+                
+                        # Checks to see if nc file already exists, if it does, skips to the next file.
+                        if BMNP.fileExists(f'{new_location}/{time}_{variable}_{scenario}.nc'): continue
+                        
+                        # Create numpy array
+                        new_data = np.full((len(lat), len(lon)), np.nan)
+                        
+                        # Convert data to a dataframe
+                        data = pd.DataFrame(new_data, index=lat, columns=lon)
+                        
+                        # Cycle through values found in prev_data
+                        # Look at the respective rows in lat and lon
+                        # Find the respective column / row in data
+                        # Add this value to this location
+                        for i in range(0, len(prev_data)):
+                            # Extract the lat and lon from the dataframe
+                            lati = latitude[i]
+                            long = longitude[i]
+                            
+                            # Extract the data from the dataframe
+                            data_value = prev_data[i]
+                            
+                            # Add the data to the correct location
+                            data[long][lati] = data_value
+                            
+                        # Create the netCDF file for new_data
+                        BMNP.createFolders(f'{new_location}/{time}_{variable}_{scenario}.nc')
+                        
+                        # Create the netCDF file
+                        nc_file = nc.Dataset(f'{new_location}/{time}_{variable}_{scenario}.nc', "w", format="NETCDF4")
+                        
+                        # Create the dimensions for the new netCDF file
+                        nc_file.createDimension("lat", len(lat))
+                        nc_file.createDimension("lon", len(lon))
+                        
+                        # Create the variables for the new netCDF file
+                        lat_nc = nc_file.createVariable("lat", "f4", ("lat",))
+                        lon_nc = nc_file.createVariable("lon", "f4", ("lon",))
+                        variable_nc = nc_file.createVariable("variable", "f4", ("lat", "lon",))
+                        
+                        # Add the attributes to the new netCDF file
+                        nc_file.description = "Subsetted HRCS Data"
+                        nc_file.source = "Subsetted from " + file
+                        lat_nc.units = "degrees_north"
+                        lon_nc.units = "degrees_east"
+                        
+                        # Add the data to the new netCDF file
+                        lat_nc[:] = lat
+                        lon_nc[:] = lon
+                        variable_nc[:] = new_data
+                        
+                        # Close the netCDF file
+                        nc_file.close()
+                        
+                elif 'mmm' in variable:
+                    period = '1985-2019'
+                    variablename = variable.replace('-', '_')
+                    
+                    # Checks to see if nc file already exists, if it does, skips to the next file.
+                    if BMNP.fileExists(f'{new_location}/{period}_{variable}_{scenario}.nc'): continue
+                    
+                    # Load file into dataframe
+                    df = pd.read_csv(f"{file_location}/{file}")
+                    
+                    # Extract the latitude and longitude from the dataframe
+                    latitude = df['latitude']
+                    longitude = df['longitude']
+                    
+                    # Sorts lat and lon
+                    lat = (BMNP.sortDFCol(latitude))[::-1]
+                    lon = BMNP.sortDFCol(longitude)
+                    
+                    # Delete columns that are not needed
+                    del df['latitude']
+                    del df['longitude']
+                    del df['region_name']
+                    
+                    # Take each row, find the mean of the row, create a column called "data" and add the mean to the column
+                    df['data'] = df.mean(axis=1)
+                    
+                    # Extract the data from the dataframe
+                    prev_data = df['data']
+                    
+                    # Create numpy array
+                    new_data = np.full((len(lat), len(lon)), np.nan)
+                    
+                    # Convert data to a dataframe
+                    data = pd.DataFrame(new_data, index=lat, columns=lon)
+                    
+                    # Cycle through values found in prev_data
+                    # Look at the respective rows in lat and lon
+                    # Find the respective column / row in data
+                    # Add this value to this location
+                    for i in range(0, len(prev_data)):
+                        # Extract the lat and lon from the dataframe
+                        lati = latitude[i]
+                        long = longitude[i]
+                        
+                        # Extract the data from the dataframe
+                        data_value = prev_data[i]
+                        
+                        # Add the data to the correct location
+                        data[long][lati] = data_value
+                        
+                    # Create the netCDF file for new_data
+                    BMNP.createFolders(f'{new_location}/{period}_{variable}_{scenario}.nc')
+                    
+                    # Create the netCDF file
+                    nc_file = nc.Dataset(f'{new_location}/{period}_{variable}_{scenario}.nc', "w", format="NETCDF4")
+                    
+                    # Create the dimensions for the new netCDF file
+                    nc_file.createDimension("lat", len(lat))
+                    nc_file.createDimension("lon", len(lon))
+                    
+                    # Create the variables for the new netCDF file
+                    lat_nc = nc_file.createVariable("lat", "f4", ("lat",))
+                    lon_nc = nc_file.createVariable("lon", "f4", ("lon",))
+                    variable_nc = nc_file.createVariable("variable", "f4", ("lat", "lon",))
+                    
+                    # Add the attributes to the new netCDF file
+                    nc_file.description = "Subsetted HRCS Data"
+                    nc_file.source = "Subsetted from " + file
+                    lat_nc.units = "degrees_north"
+                    lon_nc.units = "degrees_east"
+                    
+                    # Add the data to the new netCDF file
+                    lat_nc[:] = lat
+                    lon_nc[:] = lon
+                    variable_nc[:] = new_data
+                    
+                    # Close the netCDF file
+                    nc_file.close()
+                    
     @staticmethod
     def viewHRCSData(variable, period, scenario):
-        if period == '1985-2019' or scenario == 'observed' or variable == 'mmm' or variable == 'int-sst-var' or variable == 'seas-sst-var' or variable == 'trend-ann-var':
+        if period == '1985`-2019' or scenario == 'observed' or variable == 'mmm' or variable == 'int-sst-var' or variable == 'seas-sst-var' or variable == 'trend-ann-var':
             period = '1985-2019'
             scenario = 'observed'
         
@@ -578,10 +797,10 @@ class BMNP(QObject):
 if __name__ == "__main__":
     # Clear Linux Console first
     os.system('clear')
-    BMNP.HRCS_CSV2NC('./data/refined/HRCS_csv2/')
+    #BMNP.HRCS_CSV2NC('./data/refined/HRCS_csv2/')
     
-    '''variable = 'prob-dhw-4'
+    variable = 'prob-dhw-4'
     period = '2041-2060'
     scenario = 'ssp126'
     
-    BMNP.viewHRCSData(variable, period, scenario)'''
+    BMNP.viewHRCSData(variable, period, scenario)
