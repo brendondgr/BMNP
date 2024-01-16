@@ -12,6 +12,34 @@ class BMNP(QObject):
         return
     
     @staticmethod
+    def getValueFromKey(key, schema):
+        import json
+        config = configparser.ConfigParser()
+        config.read('config.ini')
+        
+        # Reads config in schema
+        schema = f"{config['settings']['schemas']}/{schema}.json"
+        
+        # Checks to see if the schema exists
+        if BMNP.fileExists(schema) == False:
+            print(f'Error: {schema} does not exist.')
+            return None
+        
+        # Loads the schema
+        with open(schema) as f:
+            data = json.load(f)
+            
+            # Checks to see if the key exists
+            values = key.split('/')
+            
+            # Look first for key in the first level
+            if values[0] in data:
+                # Search for the second key in the second level
+                if values[1] in data[values[0]]:
+                    # Return the value
+                    return data[values[0]][values[1]]            
+    
+    @staticmethod
     def getFileLocation(date):
         # Sets up the config parser
         config = configparser.ConfigParser()
@@ -395,13 +423,13 @@ class BMNP(QObject):
 
         # Add colorbar
         if colorbar:
-            img = plt.imshow(nc.analysed_sst[0,:,:]-273.14, extent=[x_range.min(), x_range.max(), y_range.min(), y_range.max()], 
+            img = plt.imshow(nc.analysed_sst[0,:,:]-273.14, extent=[x_range.min()+0.005, x_range.max()+0.005, y_range.min()-0.005, y_range.max()-0.005], 
                 alpha=1, zorder=2, cmap='jet', vmin=25, vmax=35)
             
             cbar = plt.colorbar(img)
             cbar.set_label('Temperature (C)')
         else:
-            plt.imshow(nc.analysed_sst[0,:,:]-273.14, extent=[x_range.min(), x_range.max(), y_range.min(), y_range.max()], 
+            plt.imshow(nc.analysed_sst[0,:,:]-273.14, extent=[x_range.min()+0.005, x_range.max()+0.005, y_range.min()-0.005, y_range.max()-0.005], 
                 alpha=1, zorder=2, cmap='jet')
             
             cbar = plt.colorbar()
@@ -730,8 +758,8 @@ class BMNP(QObject):
                     nc_file.close()
                     
     @staticmethod
-    def viewHRCSData(variable, period, scenario):
-        if period == '1985`-2019' or scenario == 'observed' or variable == 'mmm' or variable == 'int-sst-var' or variable == 'seas-sst-var' or variable == 'trend-ann-var':
+    def viewHRCSData(variable, period, scenario, bmnp):
+        if period == '1985`-2019' or scenario == 'observed' or variable == 'mmm' or variable == 'int-sst-var' or variable == 'seas-sst-var' or variable == 'trend-ann-var' or variable == 'int_sst_var' or variable == 'seas_sst_var' or variable == 'trend_ann_var':
             period = '1985-2019'
             scenario = 'observed'
         
@@ -760,8 +788,8 @@ class BMNP(QObject):
             shape = gpd.read_file('./shapeFiles/BON_Coastline.shp')
 
             # Sets Label Ranges
-            x_range = np.arange(-68.48, -68.17, 0.01).round(2)
-            y_range = np.arange(12.0, 12.35, 0.01).round(2)[::-1]
+            x_range = np.arange(np.min(nc.lon)-0.01, np.max(nc.lon)+0.01, 0.01).round(2)
+            y_range = np.arange(np.min(nc.lat)-0.00, np.max(nc.lat)+0.015, 0.01).round(2)[::-1]
             
             # Sets Limits
             ax.set_xlim(x_range.min(), x_range.max())
@@ -779,24 +807,31 @@ class BMNP(QObject):
             
             # Add the colorbar based on multiple factors
             if 'prob' in variable:
-                img = plt.imshow(nc.variable[:,:], extent=[x_range.min(), x_range.max(), y_range.min(), y_range.max()], 
+                img = plt.imshow(nc.variable[:,:], extent=[x_range.min()+0.005, x_range.max()+0.005, y_range.min()-0.005, y_range.max()-0.005], 
                     alpha=1, zorder=2, cmap='jet', vmin=0, vmax=1)
                 
                 # Add in colorbar
                 cbar = plt.colorbar(img)
             else:
-                img = plt.imshow(nc.variable[:,:], extent=[x_range.min(), x_range.max(), y_range.min(), y_range.max()], alpha=1, zorder=2, cmap='jet')
+                img = plt.imshow(nc.variable[:,:], extent=[x_range.min()+0.005, x_range.max()+0.005, y_range.min()-0.005, y_range.max()-0.005], alpha=1, zorder=2, cmap='jet')
                 
                 # Add in colorbar
                 cbar = plt.colorbar(img)
                 cbar.set_label('Probability')
+                
+            plt.grid(alpha=0.25)
+
+            bmnp.NewGraph.emit(fig)
             
-            plt.show()
-            
-            #bmnp.NewGraph.emit(fig)
 if __name__ == "__main__":
     # Clear Linux Console first
-    os.system('clear')
+    if os.name == 'posix':
+        os.system('clear')
+    
+    # Clear Windows Console
+    if os.name == 'nt':
+        os.system('cls')
+ 
     #BMNP.HRCS_CSV2NC('./data/refined/HRCS_csv2/')
     
     variable = 'prob-dhw-4'

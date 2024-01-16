@@ -131,8 +131,11 @@ class TabWidget(QTabWidget):
                 self.console_widget.add_message("Date is not valid")
                 
         elif self.viewDataTab.layout().itemAtPosition(4, 0).widget().isChecked():
-            #self.console_widget.add_message("HRCS Data")
-            pass
+            variable = self.bmnp.getValueFromKey(f'variable/{self.viewDataTab.layout().itemAtPosition(5, 1).widget().currentText()}', 'hrcs_details')
+            period = self.bmnp.getValueFromKey(f'period/{self.viewDataTab.layout().itemAtPosition(6, 1).widget().currentText()}', 'hrcs_details')
+            scenario = self.bmnp.getValueFromKey(f'scenario/{self.viewDataTab.layout().itemAtPosition(7, 1).widget().currentText()}', 'hrcs_details')
+            self.console_widget.add_message(f"Creating graph for {variable} {period} {scenario}, please wait...")
+            self.bmnp.viewHRCSData(variable, period, scenario, self.bmnp)
             
     def viewDataLayout(self):                          
         # Creates Layout
@@ -228,9 +231,24 @@ class TabWidget(QTabWidget):
         # Adds to next row
         layout.addWidget(label_period, viewDataRow, 0)
         layout.addWidget(period_dropdown, viewDataRow, 1)
+        viewDataRow += 1
+        
+        # Creates a third drop down menu
+        scenario_dropdown = QComboBox()
+        label_scenario = QLabel("Scenario:")
+        scenario_dropdown.setVisible(False)
+        label_scenario.setVisible(False)
+        with open(hrcs_location) as json_file:
+            hrcs_details = json.load(json_file)
+            for scenario in hrcs_details['scenario']:
+                scenario_dropdown.addItem(scenario)
+                
+        layout.addWidget(label_scenario, viewDataRow, 0)
+        layout.addWidget(scenario_dropdown, viewDataRow, 1)
         
         RadioHRCSData.toggled.connect(lambda: self.TV_HRCSData(variable_dropdown, label_variable,
-                                                               period_dropdown, label_period))
+                                                               period_dropdown, label_period,
+                                                               label_scenario, scenario_dropdown))
         
         viewDataRow += 1
         
@@ -275,11 +293,13 @@ class TabWidget(QTabWidget):
         check2.setVisible(not check2.isVisible())
         
     
-    def TV_HRCSData(self, variable_dropdown, label_variable, period_dropdown, label_period):
+    def TV_HRCSData(self, variable_dropdown, label_variable, period_dropdown, label_period, label_scenario, scenario_dropdown):
         variable_dropdown.setVisible(not variable_dropdown.isVisible())
         label_variable.setVisible(not label_variable.isVisible())
         period_dropdown.setVisible(not period_dropdown.isVisible())
         label_period.setVisible(not label_period.isVisible())
+        label_scenario.setVisible(not label_scenario.isVisible())
+        scenario_dropdown.setVisible(not scenario_dropdown.isVisible())
         
     def ViewDailyData(self):
         pass
