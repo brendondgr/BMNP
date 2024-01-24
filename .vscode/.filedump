@@ -1,6 +1,0 @@
-
-		begin
-      f = addfile("/media/bdgr/Samsung USB/Research/BMNP/data/refined/HRCS_nc/1985-2019_int-sst-var_observed.nc","r")
-      print(f)
-		end
-    
