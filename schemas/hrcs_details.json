@@ -2,8 +2,8 @@
     "variable": {
         "Interannual SST Variability": "int-sst-var",
         "Monthly Maximum Mean": "mmm",
-        "No DHW Days 4": "no-dhw-4",
-        "No DHW Days 8": "no-dhw-8",
+        "No DHW Days 4": "no-dhw-days-4",
+        "No DHW Days 8": "no-dhw-days-8",
         "Probability DHW Days 4": "prob-dhw-4",
         "Probability DHW Days 8": "prob-dhw-8",
         "Seasonal SST Variability": "seas-sst-var",
