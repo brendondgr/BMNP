@@ -1,0 +1,6 @@
+
+		begin
+      f = addfile("/media/bdgr/Samsung USB/Research/BMNP/data/refined/MUR_SST-Pre2020.nc","r")
+      print(f)
+		end
+    

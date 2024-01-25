@@ -61,26 +61,27 @@ class BMNP(QObject):
     def fileExists(location):
         return True if os.path.exists(location) else False
     
-    @staticmethod
+    import os
+
     def createFolders(location):
-        # Splits the location into a list
-        loc_split = location.split("/")
+        # Get the current working directory
+        current_dir = os.getcwd()
         
-        # Removes entry if the specific entry contains a "."
-        newlist = [i for i in loc_split if "." not in i]
+        # Split the file location into individual folders
+        folders = location.split('/')
         
-        # Creates the folders, going down the list one by one, if they don't exist.
-        combined = ""
-        for i in range(0, len(newlist)):
-            # Checks to see if first entry exists, if not, creates it.
-            if i == 0:
-                combined = newlist[i]
-                if not os.path.exists(combined):
-                    os.mkdir(combined)
-            else:
-                combined = combined + "/" + newlist[i]
-                if not os.path.exists(combined):
-                    os.mkdir(combined)
+        # Iterate through each folder in the file location
+        for folder in folders:
+            # Check if the folder exists
+            if not os.path.exists(folder):
+                # Create the folder
+                os.mkdir(folder)
+            
+            # Change the current working directory to the newly created folder
+            os.chdir(folder)
+        
+        # Change the current working directory back to the original directory
+        os.chdir(current_dir)
             
     @staticmethod
     def getDates(startdate, enddate):
