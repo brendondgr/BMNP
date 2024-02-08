@@ -136,6 +136,13 @@ class TabWidget(QTabWidget):
             scenario = self.bmnp.getValueFromKey(f'scenario/{self.viewDataTab.layout().itemAtPosition(7, 1).widget().currentText()}', 'hrcs_details')
             self.console_widget.add_message(f"Creating graph for {variable} {period} {scenario}, please wait...")
             self.bmnp.viewHRCSData(variable, period, scenario, self.bmnp)
+        
+        elif self.viewDataTab.layout().itemAtPosition(8, 0).widget().isChecked():
+            date = str(self.viewDataTab.layout().itemAtPosition(9, 1).widget().text())
+            saveGraphs = self.viewDataTab.layout().itemAtPosition(10, 1).widget().isChecked()
+            colorbar = self.viewDataTab.layout().itemAtPosition(10, 2).widget().isChecked()
+            console = self.console_widget
+            self.bmnp.viewMUR_mmm(date, saveGraphs, colorbar, console, self.bmnp)
             
     def viewDataLayout(self):                          
         # Creates Layout
@@ -253,14 +260,39 @@ class TabWidget(QTabWidget):
         viewDataRow += 1
         
         # -------------------------------------- #
-        # -             DAILY DATA             - #
-        # -              MULTIPLE              - #
+        # -                 MMM                - #
         # -------------------------------------- #
-        # Category for Multiple Daily Data #
-        RadioMultiDailyData = QRadioButton("Multiple Daily Data")
+        # Category for MMM #
+        RadioMMMData = QRadioButton("Monthly Mean Data")
         
-        layout.addWidget(RadioMultiDailyData, viewDataRow, 0)
+        layout.addWidget(RadioMMMData, viewDataRow, 0)
+        MMMData_Label1 = QLabel("Date:")
+        MMMData_Label1.setVisible(False)
+        MMMData_Label1.setAlignment(Qt.AlignRight)
+        MMMData_Label1.setSizePolicy(QSizePolicy.Maximum, QSizePolicy.Maximum)  # Set the size policy
+        MMMData_TextBox1 = QLineEdit()
+        MMMData_TextBox1.setPlaceholderText("YYYYMMDD")
+        MMMData_TextBox1.setVisible(False)
+        MMMData_Check1 = QCheckBox("Save Graph")
+        MMMData_Check1.setVisible(False)
+        MMMData_Check2 = QCheckBox("Stationary Colorbar")
+        MMMData_Check2.setVisible(False)
+
+        # Sets Positions for Daily Data #
+        layout.addWidget(RadioMMMData, viewDataRow, 0)
         viewDataRow += 1
+        layout.addWidget(MMMData_Label1, viewDataRow, 0)
+        layout.addWidget(MMMData_TextBox1, viewDataRow, 1, 1, 2)
+        viewDataRow += 1
+        layout.addWidget(MMMData_Check1, viewDataRow, 1)
+        layout.addWidget(MMMData_Check2, viewDataRow, 2)
+        viewDataRow += 1
+
+        # Add pixel gap on the left side
+        layout.setColumnStretch(0, 1)
+        
+        
+        RadioMMMData.toggled.connect(lambda: self.TV_MMMData(MMMData_TextBox1, MMMData_Label1, MMMData_Check1, MMMData_Check2))
         
         # -------------------------------------- #
         # -            LOGGER DATA             - #
@@ -300,6 +332,12 @@ class TabWidget(QTabWidget):
         label_period.setVisible(not label_period.isVisible())
         label_scenario.setVisible(not label_scenario.isVisible())
         scenario_dropdown.setVisible(not scenario_dropdown.isVisible())
+        
+    def TV_MMMData(self, text1, label1, check1, check2):
+        text1.setVisible(not text1.isVisible())
+        label1.setVisible(not label1.isVisible())
+        check1.setVisible(not check1.isVisible())
+        check2.setVisible(not check2.isVisible())        
         
     def ViewDailyData(self):
         pass

@@ -61,8 +61,7 @@ class BMNP(QObject):
     def fileExists(location):
         return True if os.path.exists(location) else False
     
-    import os
-
+    @staticmethod
     def createFolders(location):
         # Get the current working directory
         current_dir = os.getcwd()
@@ -469,10 +468,6 @@ class BMNP(QObject):
         return df
 
     @staticmethod
-    def addValues(datalat, datalon, datacol, lat, lon, data):
-        pass
-
-    @staticmethod
     def HRCS_CSV2NC(file_location):
         # Imports required Libraries
         import pandas as pd
@@ -823,7 +818,107 @@ class BMNP(QObject):
             plt.grid(alpha=0.25)
 
             bmnp.NewGraph.emit(fig)
+    
+        
+    @staticmethod
+    def viewMUR_mmm(date, save, colorbar, console, bmnp):
+        # Importing Plotting Libraries
+        import matplotlib.pyplot as plt
+        import geopandas as gpd
+        import xarray as xr
+        import numpy as np
+        from configparser import ConfigParser
+        
+        # Sets up the config parser
+        config = ConfigParser()
+        config.read('config.ini')
+        
+        # Reads in location for MUR
+        data_location = f"{config['settings']['MUR_mmm']}"
+        
+        # Push signal to say data was loaded in.
+        # signals.add_message(f'Loading {data_location}...')
+
+        # Loads the data
+        nc = xr.open_dataset(f'{data_location}')
+
+        # Slices to show only data from 2010-05-05
+        nc = nc.sel(time=date)
+
+        # Create plot with multiple subplots
+        fig, ax = plt.subplots(1,1, figsize=(15,10))
+
+        # Loads Shape File
+        shape = gpd.read_file('./shapeFiles/BON_Coastline.shp')
+        
+        # Create two lists for latitude and longitude
+        lat = nc.lat
+        lon = nc.lon
+        
+        print(f'Length of lat: {len(lat)} ... Length of lon: {len(lon)}')
+        
+        
+        # find min and max of lat and lon
+        lat_min, lat_max = lat.min(), lat.max()
+        lon_min, lon_max = lon.min(), lon.max()
+
+        # Sets Label Ranges
+        x_range = np.arange(lon_min, lon_max+0.01, 0.01).round(2)
+        y_range = np.arange(lat_min, lat_max+0.01, 0.01).round(2)[::-1]
+        
+        print(f'Length of x_range: {len(x_range)} ... Length of y_range: {len(y_range)}\n\n')
+        
+        print(lon.round(2))
+        print(x_range)
+
+        # Sets Limits
+        ax.set_xlim(x_range.min(), x_range.max())
+        ax.set_ylim(y_range.min(), y_range.max())
+
+        # Sets the Title
+        ax.set_title(f'MUR SST for: {date}')
+
+        # Sets Axis
+        ax.set_xlabel('Longitude')
+        ax.set_ylabel('Latitude')
+
+        # Plots the Shape File
+        shape.plot(ax=ax, color='lime', edgecolor='black', zorder=3)
+
+        # Generate the heatmap
+        
+
+        # Add colorbar
+        if colorbar:
+            img = plt.imshow(nc.mmm_sst[:,:], extent=[x_range.min()+0.005, x_range.max()+0.005, y_range.min()-0.005, y_range.max()-0.005], 
+                alpha=1, zorder=2, cmap='jet', vmin=25, vmax=31)
             
+            cbar = plt.colorbar(img)
+            cbar.set_label('Temperature (C)')
+        else:
+            plt.imshow(nc.mmm_sst[:,:], extent=[x_range.min()+0.005, x_range.max()+0.005, y_range.min()-0.005, y_range.max()-0.005], 
+                alpha=1, zorder=2, cmap='jet')
+            
+            cbar = plt.colorbar()
+            cbar.set_label('Temperature (C)')
+        
+        # Saves the graph if specified
+        if save:
+            colorbar = '_ColorBarAdjusted' if colorbar else ''
+            name = f'MUR_{date}{colorbar}'
+            download_loc = f"{config['settings']['graphs']}/MUR-Daily/{name}.png"
+            
+            # First checks to see if the file exists in the refinedMUR folder, then checks to see if it exists in the rawMUR folder.
+            if BMNP.fileExists(download_loc):
+                console.add_message(f'Error: {name} already exists. It was not saved.')
+            else:
+                BMNP.createFolders(download_loc)
+                plt.savefig(download_loc)
+                console.add_message(f'{name} was saved.')
+        
+        # Push signal of the plot
+        bmnp.NewGraph.emit(fig)
+    
 if __name__ == "__main__":
     # Clear Linux Console first
     if os.name == 'posix':
@@ -835,8 +930,11 @@ if __name__ == "__main__":
  
     #BMNP.HRCS_CSV2NC('./data/refined/HRCS_csv2/')
     
-    variable = 'prob-dhw-4'
-    period = '2041-2060'
-    scenario = 'ssp126'
+    date = '201502'
+    save = False
+    colorbar = False
+    console = None
+    bmnp = None
+    signals = None
     
-    BMNP.viewHRCSData(variable, period, scenario)
+    BMNP.viewMUR_mmm(date, save, colorbar, console, bmnp, signals)
