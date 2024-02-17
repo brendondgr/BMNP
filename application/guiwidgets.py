@@ -109,6 +109,10 @@ class TabWidget(QTabWidget):
     def ButtonClicked(self):
         from BMNP_Logic import checkDates
         
+        ##########################################
+        ####          VIEW DAILY DATA         ####
+        ##########################################
+        
         # Checks to see if the Daily Data Radio Button is selected
         if self.viewDataTab.layout().itemAtPosition(0, 0).widget().isChecked():
             if checkDates().checkSingleDate(self.viewDataTab.layout().itemAtPosition(2, 1).widget().text(),
@@ -130,6 +134,9 @@ class TabWidget(QTabWidget):
             else:
                 self.console_widget.add_message("Date is not valid")
                 
+        ##########################################
+        ####             HRCS DATA            ####
+        ##########################################
         elif self.viewDataTab.layout().itemAtPosition(4, 0).widget().isChecked():
             variable = self.bmnp.getValueFromKey(f'variable/{self.viewDataTab.layout().itemAtPosition(5, 1).widget().currentText()}', 'hrcs_details')
             period = self.bmnp.getValueFromKey(f'period/{self.viewDataTab.layout().itemAtPosition(6, 1).widget().currentText()}', 'hrcs_details')
@@ -137,6 +144,9 @@ class TabWidget(QTabWidget):
             self.console_widget.add_message(f"Creating graph for {variable} {period} {scenario}, please wait...")
             self.bmnp.viewHRCSData(variable, period, scenario, self.bmnp)
         
+        ##########################################
+        ####           MONTHLY MEAN           ####
+        ##########################################
         elif self.viewDataTab.layout().itemAtPosition(8, 0).widget().isChecked():
             date = str(self.viewDataTab.layout().itemAtPosition(9, 1).widget().text())
             saveGraphs = self.viewDataTab.layout().itemAtPosition(10, 1).widget().isChecked()

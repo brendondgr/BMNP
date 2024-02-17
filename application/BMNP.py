@@ -755,7 +755,7 @@ class BMNP(QObject):
                     
     @staticmethod
     def viewHRCSData(variable, period, scenario, bmnp):
-        if period == '1985`-2019' or scenario == 'observed' or variable == 'mmm' or variable == 'int-sst-var' or variable == 'seas-sst-var' or variable == 'trend-ann-var' or variable == 'int_sst_var' or variable == 'seas_sst_var' or variable == 'trend_ann_var':
+        if period == '1985-2019' or scenario == 'observed' or variable == 'mmm' or variable == 'int-sst-var' or variable == 'seas-sst-var' or variable == 'trend-ann-var' or variable == 'int_sst_var' or variable == 'seas_sst_var' or variable == 'trend_ann_var':
             period = '1985-2019'
             scenario = 'observed'
         
@@ -805,16 +805,22 @@ class BMNP(QObject):
             if 'prob' in variable:
                 img = plt.imshow(nc.variable[:,:], extent=[x_range.min()+0.005, x_range.max()+0.005, y_range.min()-0.005, y_range.max()-0.005], 
                     alpha=1, zorder=2, cmap='jet', vmin=0, vmax=1)
-                
-                # Add in colorbar
-                cbar = plt.colorbar(img)
             else:
                 img = plt.imshow(nc.variable[:,:], extent=[x_range.min()+0.005, x_range.max()+0.005, y_range.min()-0.005, y_range.max()-0.005], alpha=1, zorder=2, cmap='jet')
                 
-                # Add in colorbar
-                cbar = plt.colorbar(img)
+            cbar = plt.colorbar(img)
+            
+            if 'mmm' in variable:
+                cbar.set_label('Temperature (C)')
+            elif 'no-dhw' in variable:
+                cbar.set_label('Days')
+            elif 'prob' in variable:
                 cbar.set_label('Probability')
-                
+            elif 'var' in variable:
+                cbar.set_label('Variability')
+            elif 'trend-ann-sst' in variable:
+                cbar.set_label('')
+            
             plt.grid(alpha=0.25)
 
             bmnp.NewGraph.emit(fig)
@@ -855,7 +861,7 @@ class BMNP(QObject):
         lat = nc.lat
         lon = nc.lon
         
-        print(f'Length of lat: {len(lat)} ... Length of lon: {len(lon)}')
+        #print(f'Length of lat: {len(lat)} ... Length of lon: {len(lon)}')
         
         
         # find min and max of lat and lon
@@ -866,10 +872,10 @@ class BMNP(QObject):
         x_range = np.arange(lon_min, lon_max+0.01, 0.01).round(2)
         y_range = np.arange(lat_min, lat_max+0.01, 0.01).round(2)[::-1]
         
-        print(f'Length of x_range: {len(x_range)} ... Length of y_range: {len(y_range)}\n\n')
+        #print(f'Length of x_range: {len(x_range)} ... Length of y_range: {len(y_range)}\n\n')
         
-        print(lon.round(2))
-        print(x_range)
+        #print(lon.round(2))
+        #print(x_range)
 
         # Sets Limits
         ax.set_xlim(x_range.min(), x_range.max())
