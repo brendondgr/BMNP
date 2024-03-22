@@ -161,3 +161,15 @@ cython_debug/
 
 HRCS_csv1/
 HRCS_csv2/
+
+# ./notebooks/
+datadiv2/
+datadiv7/
+datanodiv/
+graphs/
+tempdata/
+tempdata2/
+templates/
+
+# ./data/
+data/
