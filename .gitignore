@@ -170,6 +170,7 @@ graphs/
 tempdata/
 tempdata2/
 templates/
+testfolder/
 
 # ./data/
 data/
